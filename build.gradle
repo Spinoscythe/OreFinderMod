@@ -1,0 +1,93 @@
+import me.modmuss50.mpp.ReleaseType
+
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id "me.modmuss50.mod-publish-plugin" version "0.5.1"
+    id 'net.neoforged.moddev' version '0.1.87'
+}
+
+apply from: '../gradletools.gradle'
+
+repositories {
+    mavenLocal()
+    maven { url "https://dvs1.progwml6.com/files/maven" } // JEI
+    maven { url "https://maven.blamejared.com" } // Patchouli
+    maven { url "https://maven.k-4u.nl" } // McJtyLib, TOP
+    maven { url "https://maven.theillusivec4.top/" } // Curios
+}
+
+version = mod_version
+group = mod_group_id
+archivesBaseName = mod_id
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+subsystems {
+    parchment {
+        minecraftVersion("1.20.6")
+        mappingsVersion("2024.06.02")
+    }
+}
+
+runs {
+    configureEach {
+        workingDirectory project.file('run')
+        modSource project(":${mod_name}").sourceSets.main
+    }
+
+
+    client {
+    }
+
+    server {
+    }
+
+    data {
+        programArguments.addAll '--all', '--output', file('src/generated/resources/').absolutePath, '--existing', sourceSets.main.resources.srcDirs[0].absolutePath
+    }
+}
+dependencies {
+    mc()
+}
+
+// Example configuration to allow publishing using the maven-publish task
+// we define a custom artifact that is sourced from the reobfJar output task
+// and then declare that to be published
+// Note you'll need to add a repository here
+def reobfFile = file("$project.layout.buildDirectory/reobfJar/output.jar")
+def reobfArtifact = artifacts.add('default', reobfFile) {
+    type 'jar'
+    builtBy 'reobfJar'
+}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact reobfArtifact
+        }
+    }
+    repositories {
+        maven {
+            url "file:///${project.projectDir}/mcmodsrepo"
+        }
+    }
+}
+
+publishMods {
+    file = jar.archiveFile
+    changelog = "Hello!"
+    type = STABLE
+    modLoaders.add("neoforge")
+
+    modrinth {
+        projectId = "ore-finder-mod"
+        accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+        minecraftVersions.add(minecraft_version)
+    }
+    github {
+        repository = "SpinoSxythe/OreFinderMod"
+        accessToken = providers.environmentVariable("GITHUB_TOKEN")
+        commitish = "main"
+    }
+}
